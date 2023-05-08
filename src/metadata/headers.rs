@@ -30,7 +30,8 @@ pub fn read_headers(mut reader: impl BufRead) -> Result<HashMap<String, String>,
 	let mut line = String::new();
 	reader.read_line(&mut line)?;
 	while !line.is_empty() && line != "\r\n" {
-		let (key, value) = read_header(&mut reader, &mut line)?;
+		let (mut key, value) = read_header(&mut reader, &mut line)?;
+		key.make_ascii_lowercase();
 		headers.insert(key, value);
 	}
 
@@ -128,51 +129,51 @@ Content-MD5:     kL8G8UnwN1oKBdHWVkb0CQ==\r
 		assert_eq!(reader.position(), header_text.len() as u64);
 		assert_eq!(headers.len(), 11);
 		assert_eq!(
-			headers.get("Content-Transfer-Encoding"),
+			headers.get("content-transfer-encoding"),
 			Some(&"BINARY".into()),
-			"Content-Transfer-Encoding"
+			"content-transfer-encoding"
 		);
-		assert_eq!(headers.get("X-Binary-ID"), Some(&"1".into()), "X-Binary-ID");
+		assert_eq!(headers.get("x-binary-id"), Some(&"1".into()), "x-binary-id");
 		assert_eq!(
-			headers.get("X-Binary-Element-Type"),
+			headers.get("x-binary-element-type"),
 			Some(&"signed 32-bit integer".into()),
-			"X-Binary-Element-Type"
+			"x-binary-element-type"
 		);
 		assert_eq!(
-			headers.get("X-Binary-Element-Byte-Order"),
+			headers.get("x-binary-element-byte-order"),
 			Some(&"LITTLE_ENDIAN".into()),
-			"X-Binary-Element-Byte-Order"
+			"x-binary-element-byte-order"
 		);
 		assert_eq!(
-			headers.get("X-Binary-Number-of-Elements"),
+			headers.get("x-binary-number-of-elements"),
 			Some(&"8294400".into()),
-			"X-Binary-Number-of-Elements"
+			"x-binary-number-of-elements"
 		);
 		assert_eq!(
-			headers.get("X-Binary-Size-Fastest-Dimension"),
+			headers.get("x-binary-size-fastest-dimension"),
 			Some(&"2880".into()),
-			"X-Binary-Size-Fastest-Dimension"
+			"x-binary-size-fastest-dimension"
 		);
 		assert_eq!(
-			headers.get("X-Binary-Size-Second-Dimension"),
+			headers.get("x-binary-size-second-dimension"),
 			Some(&"2880".into()),
-			"X-Binary-Size-Second-Dimension"
+			"x-binary-size-second-dimension"
 		);
 		assert_eq!(
-			headers.get("X-Binary-Size-Padding"),
+			headers.get("x-binary-size-padding"),
 			Some(&"1".into()),
-			"X-Binary-Size-Padding"
+			"x-binary-size-padding"
 		);
 		assert_eq!(
-			headers.get("Content-Type"),
+			headers.get("content-type"),
 			Some(&"application/octet-stream;conversions=\"x-CBF_BYTE_OFFSET\"".into()),
-			"Content-Type"
+			"content-type"
 		);
-		assert_eq!(headers.get("X-Binary-Size"), Some(&"10161580".into()), "X-Binary-Size");
+		assert_eq!(headers.get("x-binary-size"), Some(&"10161580".into()), "x-binary-size");
 		assert_eq!(
-			headers.get("Content-MD5"),
+			headers.get("content-md5"),
 			Some(&"kL8G8UnwN1oKBdHWVkb0CQ==".into()),
-			"Content-MD5"
+			"content-md5"
 		);
 	}
 
