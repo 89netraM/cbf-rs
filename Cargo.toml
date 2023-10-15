@@ -1,8 +1,5 @@
-[package]
-name = "cbf-rs"
-version = "0.1.0"
-edition = "2021"
+[workspace]
 
-[dependencies]
-nom = "^7.1"
-thiserror = "^1"
+members = [
+  "cbf-rs",
+]
