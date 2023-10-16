@@ -1,0 +1,41 @@
+name: Publish web app
+
+on:
+  push:
+    branches:
+    - "main"
+    - "feature/web-app" # TODO: Remove before merging
+
+jobs:
+  build-and-publish:
+    runs-on: ubuntu-latest
+
+    permissions:
+      pages: write
+      id-token: write
+
+    defaults:
+      run:
+        working-directory: ./cbf-ts-frontend/
+
+    steps:
+    - uses: actions/checkout@v3
+
+    - uses: actions/setup-node@v3
+
+    - name: Install wasm-pack
+      run: cargo install wasm-pack
+
+    - name: npm install
+      run: npm ci
+
+    - name: vite build
+      run: npm run build
+
+    - name: Upload GitHub Pages artifact
+      uses: actions/upload-pages-artifact@v2
+      with:
+        path: ./cbf-ts-frontend/dist/
+
+    - name: Deploy GitHub Pages
+      uses: actions/deploy-pages@v2
