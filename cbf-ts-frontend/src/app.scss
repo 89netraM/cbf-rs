@@ -1,0 +1,33 @@
+:root {
+	font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+	color-scheme: light dark;
+	color: rgba(255, 255, 255, 0.87);
+	background-color: #242424;
+
+	--border: #0f0f0f;
+	--level1: #333333;
+	
+	@media (prefers-color-scheme: light) {
+		color: #213547;
+		background-color: #dddddd;
+
+		--border: #f0f0f0;
+		--level1: #ffffff;
+	}
+}
+
+* {
+	box-sizing: border-box;
+}
+
+body {
+	margin: 0px;
+
+	width: 100vw;
+	height: 100vh;
+
+	#app {
+		width: 100%;
+		height: 100%;
+	}
+}
