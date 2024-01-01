@@ -1,9 +1,3 @@
-pub struct Image {
-	pub width: usize,
-	pub height: usize,
-	pub pixels: Pixels,
-}
-
 pub enum Pixels {
 	U8(Box<[u8]>),
 	I8(Box<[i8]>),
@@ -17,26 +11,17 @@ pub enum Pixels {
 	F64(Box<[f64]>),
 }
 
-impl Image {
-	pub fn new<P>(width: usize, height: usize, pixels: P) -> Self
-	where
-		P: Into<Pixels>,
-	{
-		Self { width, height, pixels: pixels.into() }
-	}
-}
-
-macro_rules! impl_from_for_pixels {
+macro_rules! pixels_from_vec {
 	($($name:ident: $type:ty,)*) => {
 		$(impl From<Vec<$type>> for Pixels {
-			fn from(pixels: Vec<$type>) -> Self {
-				Self::$name(pixels.into_boxed_slice())
+			fn from(value: Vec<$type>) -> Self {
+				Pixels::$name(value.into())
 			}
 		})*
 	};
 }
 
-impl_from_for_pixels!(
+pixels_from_vec!(
 	U8: u8,
 	I8: i8,
 	U16: u16,

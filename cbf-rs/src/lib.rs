@@ -7,10 +7,10 @@ use std::io::{BufRead, Error as IOError, Read};
 use compression::read_byte_offset;
 use thiserror::Error as ThisError;
 
-use image::{Image, Pixels};
+use image::{pixel::Pixels, ImageEnum};
 use metadata::{read_metadata, ByteOrder, Conversion, ElementType, Encoding, Error as MetadataError, Metadata};
 
-pub fn read_all_images(mut reader: impl BufRead) -> Result<Vec<Image>, Error> {
+pub fn read_all_images(mut reader: impl BufRead) -> Result<Vec<ImageEnum>, Error> {
 	let mut images = Vec::new();
 
 	while let Some(image) = try_read_next_image(&mut reader)? {
@@ -20,7 +20,7 @@ pub fn read_all_images(mut reader: impl BufRead) -> Result<Vec<Image>, Error> {
 	Ok(images)
 }
 
-fn try_read_next_image(reader: impl BufRead) -> Result<Option<Image>, Error> {
+fn try_read_next_image(reader: impl BufRead) -> Result<Option<ImageEnum>, Error> {
 	match read_image(reader) {
 		Ok(image) => Ok(Some(image)),
 		Err(Error::NoImage) => Ok(None),
@@ -28,17 +28,17 @@ fn try_read_next_image(reader: impl BufRead) -> Result<Option<Image>, Error> {
 	}
 }
 
-pub fn read_image(mut reader: impl BufRead) -> Result<Image, Error> {
+pub fn read_image(mut reader: impl BufRead) -> Result<ImageEnum, Error> {
 	progress_reader_to_cbf_start(&mut reader)?;
 	let metadata = read_metadata(&mut reader)?;
 	read_binary_header(&mut reader)?;
 	let pixels = read_pixels(&mut reader, &metadata)?;
 	progress_reader_to_cbf_end(&mut reader)?;
-	Ok(Image {
-		width: metadata.width.ok_or(Error::MissingDimension)?,
-		height: metadata.height.ok_or(Error::MissingDimension)?,
+	Ok(ImageEnum::from_pixels(
+		metadata.width.ok_or(Error::MissingDimension)?,
+		metadata.height.ok_or(Error::MissingDimension)?,
 		pixels,
-	})
+	))
 }
 
 fn read_pixels(reader: impl Read, metadata: &Metadata) -> Result<Pixels, Error> {
@@ -153,23 +153,25 @@ pub enum Error {
 mod tests {
 	use std::io::{Cursor, Read};
 
-	use super::{image::Pixels, read_image};
+	use super::{image::ImageEnum, read_image};
 
 	#[test]
 	fn read_real_image() {
 		const EXAMPLE_DATA: &'static [u8] = include_bytes!("./examples/snap_V4_00013.cbf");
 		let mut reader = Cursor::new(EXAMPLE_DATA);
 		let image = read_image(&mut reader).expect("to read real image");
+		let ImageEnum::I32(image) = image else {
+			panic!("expected i32 pixels")
+		};
 
 		assert_eq!(image.width, 2880);
 		assert_eq!(image.height, 2880);
-		let Pixels::I32(pixels) = image.pixels else { panic!("expected i32 pixels") };
-		assert_eq!(pixels[0], 100);
-		assert_eq!(pixels[1], 100);
-		assert_eq!(pixels[2880], 192);
-		assert_eq!(pixels[4145760], 366);
-		assert_eq!(pixels[4153200], 9636);
-		assert_eq!(pixels[8294399], 100);
+		assert_eq!(image.pixels[0], 100);
+		assert_eq!(image.pixels[1], 100);
+		assert_eq!(image.pixels[2880], 192);
+		assert_eq!(image.pixels[4145760], 366);
+		assert_eq!(image.pixels[4153200], 9636);
+		assert_eq!(image.pixels[8294399], 100);
 
 		let mut rest = String::new();
 		reader.read_to_string(&mut rest).expect("to read rest as string");
