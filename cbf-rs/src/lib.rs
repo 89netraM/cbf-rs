@@ -1,3 +1,4 @@
+pub mod analysis;
 pub mod compression;
 pub mod image;
 pub mod metadata;
@@ -166,12 +167,12 @@ mod tests {
 
 		assert_eq!(image.width, 2880);
 		assert_eq!(image.height, 2880);
-		assert_eq!(image.pixels[0], 100);
-		assert_eq!(image.pixels[1], 100);
-		assert_eq!(image.pixels[2880], 192);
-		assert_eq!(image.pixels[4145760], 366);
-		assert_eq!(image.pixels[4153200], 9636);
-		assert_eq!(image.pixels[8294399], 100);
+		assert_eq!(image.get_pixel(0), Some(&100));
+		assert_eq!(image.get_pixel(1), Some(&100));
+		assert_eq!(image.get_pixel(2880), Some(&192));
+		assert_eq!(image.get_pixel(4145760), Some(&366));
+		assert_eq!(image.get_pixel(4153200), Some(&9636));
+		assert_eq!(image.get_pixel(8294399), Some(&100));
 
 		let mut rest = String::new();
 		reader.read_to_string(&mut rest).expect("to read rest as string");

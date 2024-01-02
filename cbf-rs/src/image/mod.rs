@@ -5,7 +5,47 @@ pub mod pixel;
 pub struct Image<P> {
 	pub width: usize,
 	pub height: usize,
-	pub pixels: Box<[P]>,
+	pixels: Box<[P]>,
+}
+
+impl<P> Image<P> {
+	pub fn get_pixel(&self, coordinate: impl ImageCoordinate) -> Option<&P> {
+		Some(&self.pixels[coordinate.index(self.width, self.height)?])
+	}
+
+	pub fn pixels(&self) -> &[P] {
+		&self.pixels
+	}
+}
+
+pub trait ImageCoordinate {
+	fn index(&self, width: usize, height: usize) -> Option<usize>;
+}
+
+impl ImageCoordinate for usize {
+	fn index(&self, width: usize, height: usize) -> Option<usize> {
+		if width * height - 1 < *self {
+			None
+		} else {
+			Some(*self)
+		}
+	}
+}
+
+impl ImageCoordinate for (isize, isize) {
+	fn index(&self, width: usize, height: usize) -> Option<usize> {
+		let (x, y) = self;
+
+		let x = x + (width / 2) as isize;
+		let y = y + (height / 2) as isize;
+
+		if x < 0 || y < 0 || width < x as usize || height < y as usize {
+			return None;
+		}
+
+		let index = y as usize * width + x as usize;
+		index.index(width, height)
+	}
 }
 
 pub enum ImageEnum {
