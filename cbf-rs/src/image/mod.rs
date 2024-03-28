@@ -62,6 +62,36 @@ pub enum ImageEnum {
 }
 
 impl ImageEnum {
+	pub fn width(&self) -> usize {
+		match self {
+			ImageEnum::U8(image) => image.width,
+			ImageEnum::I8(image) => image.width,
+			ImageEnum::U16(image) => image.width,
+			ImageEnum::I16(image) => image.width,
+			ImageEnum::U32(image) => image.width,
+			ImageEnum::I32(image) => image.width,
+			ImageEnum::F32(image) => image.width,
+			ImageEnum::U64(image) => image.width,
+			ImageEnum::I64(image) => image.width,
+			ImageEnum::F64(image) => image.width,
+		}
+	}
+
+	pub fn height(&self) -> usize {
+		match self {
+			ImageEnum::U8(image) => image.height,
+			ImageEnum::I8(image) => image.height,
+			ImageEnum::U16(image) => image.height,
+			ImageEnum::I16(image) => image.height,
+			ImageEnum::U32(image) => image.height,
+			ImageEnum::I32(image) => image.height,
+			ImageEnum::F32(image) => image.height,
+			ImageEnum::U64(image) => image.height,
+			ImageEnum::I64(image) => image.height,
+			ImageEnum::F64(image) => image.height,
+		}
+	}
+
 	pub fn from_pixels(width: usize, height: usize, pixels: Pixels) -> Self {
 		macro_rules! from_pixels {
 			($($name:ident),*) => {
