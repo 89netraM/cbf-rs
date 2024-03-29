@@ -33,6 +33,7 @@
 		const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
 		image.writeImage(imageData.data);
 		ctx.putImageData(imageData, 0, 0);
+		image.free();
 	}
 
 	async function showAnalysis(files: ReadonlyArray<File>): Promise<void> {
@@ -47,16 +48,18 @@
 		for (const file of files) {
 			const image = await readImage(file);
 			analysis.analyze(image);
-
+			
 			if (imageData == null) {
 				canvas.width = image.width / 2;
 				canvas.height = files.length;
-	
+				
 				imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
 			}
+			image.free();
 			analysis.writeImage(imageData.data);
 			ctx.putImageData(imageData, 0, 0);
 		}
+		analysis.free();
 	}
 
 	async function readImage(file: File): Promise<Image> {
