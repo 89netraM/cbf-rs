@@ -1,8 +1,7 @@
 <script lang="ts">
-	import init, { Image } from "cbf-rs-wasm";
+	import init, { Image, Analysis } from "cbf-rs-wasm";
 
 	let canvas: HTMLCanvasElement | null = null;
-	let images: ReadonlyArray<Image> | null = null;
 
 	async function openFile(
 		e: Event & { currentTarget: EventTarget & HTMLInputElement }
@@ -12,31 +11,20 @@
 			alert("No file selected");
 			return;
 		}
-
-		images = await Promise.all([...files].map(async (file) => {
-			const buffer = new Uint8Array(await file.arrayBuffer());
-			return Image.load(buffer)
-		}));
-
-		showImage();
-	}
-
-	function showImage(): void {
-		if (canvas == null || images == null) {
-			return;
-		}
 		
-		if (images.length === 1) {
-			showSingleImage(images[0]);
+		if (files.length === 1) {
+			await showImage(files[0]);
 		} else {
-			showMultipleImages(images);
+			await showAnalysis(Array.from(files));
 		}
 	}
 
-	function showSingleImage(image: Image): void {
+	async function showImage(file: File): Promise<void> {
 		if (canvas == null) {
 			return;
 		}
+
+		const image = await readImage(file);
 
 		canvas.width = image.width;
 		canvas.height = image.height;
@@ -47,20 +35,33 @@
 		ctx.putImageData(imageData, 0, 0);
 	}
 
-	function showMultipleImages(images: ReadonlyArray<Image>): void {
+	async function showAnalysis(files: ReadonlyArray<File>): Promise<void> {
 		if (canvas == null) {
 			return;
 		}
 
-		canvas.width = images[0].width / 2;
-		canvas.height = images.length;
-
-		debugger;
-
 		const ctx = canvas.getContext("2d")!;
-		const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
-		Image.analyze(images, imageData.data);
-		ctx.putImageData(imageData, 0, 0);
+		let imageData: ImageData | null = null;
+
+		const analysis = Analysis.init();
+		for (const file of files) {
+			const image = await readImage(file);
+			analysis.analyze(image);
+
+			if (imageData == null) {
+				canvas.width = image.width / 2;
+				canvas.height = files.length;
+	
+				imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+			}
+			analysis.writeImage(imageData.data);
+			ctx.putImageData(imageData, 0, 0);
+		}
+	}
+
+	async function readImage(file: File): Promise<Image> {
+		const buffer = new Uint8Array(await file.arrayBuffer());
+		return Image.load(buffer);
 	}
 </script>
 

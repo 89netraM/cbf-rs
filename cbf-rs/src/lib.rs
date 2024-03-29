@@ -67,12 +67,12 @@ fn read_pixels(reader: impl Read, metadata: &Metadata) -> Result<Pixels, Error> 
 				};
 			}
 			read_byte_offset!(
-				Unsigned8bitInteger: 0u8,
-				Signed8bitInteger: 0i8,
-				Unsigned16bitInteger: 0u16,
-				Signed16bitInteger: 0i16,
-				Unsigned32bitInteger: 0u32,
-				Signed32bitInteger: 0i32,
+				Unsigned8bitInteger: 0i64,
+				Signed8bitInteger: 0i64,
+				Unsigned16bitInteger: 0i64,
+				Signed16bitInteger: 0i64,
+				Unsigned32bitInteger: 0i64,
+				Signed32bitInteger: 0i64,
 			)
 		}
 		_ => Err(Error::UnsupportedCompression),

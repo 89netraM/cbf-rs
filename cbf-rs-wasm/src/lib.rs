@@ -37,28 +37,38 @@ impl Image {
 			ImageEnum::F64(image) => write_image::f64(image.pixels(), pixel_buffer),
 		}
 	}
+}
 
-	#[wasm_bindgen]
-	pub fn analyze(images: Box<[Image]>, pixel_buffer: &mut [u8]) {
-		let lines: Vec<_> = images
-			.into_iter()
-			.flat_map(|image| match &image.0 {
-				ImageEnum::U8(image) => analyze_image::u8(image),
-				ImageEnum::I8(image) => analyze_image::i8(image),
-				ImageEnum::U16(image) => analyze_image::u16(image),
-				ImageEnum::I16(image) => analyze_image::i16(image),
-				ImageEnum::U32(image) => analyze_image::u32(image),
-				ImageEnum::I32(image) => analyze_image::i32(image),
-				ImageEnum::F32(image) => analyze_image::f32(image),
-				ImageEnum::U64(image) => analyze_image::u64(image),
-				ImageEnum::I64(image) => analyze_image::i64(image),
-				ImageEnum::F64(image) => analyze_image::f64(image),
-			})
-			.collect();
-		let (min, max) = min_max(lines.iter()).unwrap_or_else(|| (&f64::MIN, &f64::MAX));
+#[wasm_bindgen]
+pub struct Analysis(Vec<f64>);
+
+#[wasm_bindgen]
+impl Analysis {
+	pub fn init() -> Analysis {
+		Analysis(Vec::new())
+	}
+
+	pub fn analyze(&mut self, image: &Image) {
+		match &image.0 {
+			ImageEnum::U8(image) => analyze_image::u8(image, &mut self.0),
+			ImageEnum::I8(image) => analyze_image::i8(image, &mut self.0),
+			ImageEnum::U16(image) => analyze_image::u16(image, &mut self.0),
+			ImageEnum::I16(image) => analyze_image::i16(image, &mut self.0),
+			ImageEnum::U32(image) => analyze_image::u32(image, &mut self.0),
+			ImageEnum::I32(image) => analyze_image::i32(image, &mut self.0),
+			ImageEnum::F32(image) => analyze_image::f32(image, &mut self.0),
+			ImageEnum::U64(image) => analyze_image::u64(image, &mut self.0),
+			ImageEnum::I64(image) => analyze_image::i64(image, &mut self.0),
+			ImageEnum::F64(image) => analyze_image::f64(image, &mut self.0),
+		};
+	}
+
+	#[wasm_bindgen(js_name = "writeImage")]
+	pub fn write_image(&self, pixel_buffer: &mut [u8]) {
+		let (min, max) = min_max(self.0.iter()).unwrap_or_else(|| (&f64::MIN, &f64::MAX));
 		let magnitude = max - min;
-		let scale = 255.0 / magnitude;
-		let pixels = lines.iter().map(|n| ((*n - min) * scale) as u8);
+		let scale = 255.0 / magnitude as f64;
+		let pixels = self.0.iter().map(|n| ((*n - min) as f64 * scale) as u8);
 		write_to_pixel_buffer(pixels, pixel_buffer);
 	}
 }
@@ -101,9 +111,9 @@ mod analyze_image {
 
 	macro_rules! impl_analyze_image_for_pixels {
 		($($name:ident: $type:ty,)*) => {
-			$(pub fn $name(image: &Image<$type>) -> Vec<f64> {
+			$(pub fn $name(image: &Image<$type>, target: &mut impl Extend<f64>) {
 				let result = radial_difraction_analysis(&image, &config_for_image(&image), nearest_neighbour);
-				result.into_iter().map(|n| *n as f64).collect()
+				target.extend(result.into_iter().map(|n| *n as f64))
 			})*
 		};
 	}
