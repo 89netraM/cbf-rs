@@ -42,7 +42,17 @@ mod tests {
 
 		let (x, y) = polar_to_cartesian(2.0, angle, radius);
 
-		assert!((expected_x - x).abs() <= f64::EPSILON, "expected {} and actual {} are not equal", expected_x, x);
-		assert!((expected_y - y).abs() <= f64::EPSILON, "expected {} and actual {} are not equal", expected_y, y);
+		assert!(
+			(expected_x - x).abs() <= f64::EPSILON,
+			"expected {} and actual {} are not equal",
+			expected_x,
+			x
+		);
+		assert!(
+			(expected_y - y).abs() <= f64::EPSILON,
+			"expected {} and actual {} are not equal",
+			expected_y,
+			y
+		);
 	}
 }

@@ -2,29 +2,39 @@
 	import init, { Image } from "cbf-rs-wasm";
 
 	let canvas: HTMLCanvasElement | null = null;
-	let image: Image | null = null;
+	let images: ReadonlyArray<Image> | null = null;
 
 	async function openFile(
 		e: Event & { currentTarget: EventTarget & HTMLInputElement }
 	): Promise<void> {
-		if (e.currentTarget.files?.length !== 1) {
+		const files = e.currentTarget.files;
+		if (files == null || files.length === 0) {
 			alert("No file selected");
 			return;
 		}
 
-		const file = e.currentTarget.files.item(0);
-		if (file == null) {
-			alert("Could not open file");
-			return;
-		}
+		images = await Promise.all([...files].map(async (file) => {
+			const buffer = new Uint8Array(await file.arrayBuffer());
+			return Image.load(buffer)
+		}));
 
-		const buffer = new Uint8Array(await file.arrayBuffer());
-		image = Image.load(buffer);
 		showImage();
 	}
 
 	function showImage(): void {
-		if (canvas == null || image == null) {
+		if (canvas == null || images == null) {
+			return;
+		}
+		
+		if (images.length === 1) {
+			showSingleImage(images[0]);
+		} else {
+			showMultipleImages(images);
+		}
+	}
+
+	function showSingleImage(image: Image): void {
+		if (canvas == null) {
 			return;
 		}
 
@@ -34,6 +44,22 @@
 		const ctx = canvas.getContext("2d")!;
 		const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
 		image.writeImage(imageData.data);
+		ctx.putImageData(imageData, 0, 0);
+	}
+
+	function showMultipleImages(images: ReadonlyArray<Image>): void {
+		if (canvas == null) {
+			return;
+		}
+
+		canvas.width = images[0].width / 2;
+		canvas.height = images.length;
+
+		debugger;
+
+		const ctx = canvas.getContext("2d")!;
+		const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+		Image.analyze(images, imageData.data);
 		ctx.putImageData(imageData, 0, 0);
 	}
 </script>
@@ -52,7 +78,7 @@
 			<p>Loading...</p>
 		{:then}
 			<label for="file">Load <code>.cbf</code></label>
-			<input id="file" type="file" accept=".cbf" on:change={openFile} />
+			<input id="file" type="file" accept=".cbf" multiple on:change={openFile} />
 		{:catch error}
 			<p>Something went wrong: {error.message}</p>
 		{/await}
@@ -100,6 +126,11 @@
 			background-color: var(--level1);
 
 			padding: 1rem;
+
+			display: flex;
+			flex-direction: column;
+			align-items: flex-start;
+			gap: 0.5rem;
 
 			#file {
 				display: none;
