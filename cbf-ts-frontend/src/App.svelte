@@ -1,17 +1,18 @@
 <script lang="ts">
 	import init, { Image, Analysis } from "cbf-rs-wasm";
+	import AnalysisWorker from "./worker?worker";
 
 	let canvas: HTMLCanvasElement | null = null;
 
 	async function openFile(
-		e: Event & { currentTarget: EventTarget & HTMLInputElement }
+		e: Event & { currentTarget: EventTarget & HTMLInputElement },
 	): Promise<void> {
 		const files = e.currentTarget.files;
 		if (files == null || files.length === 0) {
 			alert("No file selected");
 			return;
 		}
-		
+
 		if (files.length === 1) {
 			await showImage(files[0]);
 		} else {
@@ -42,24 +43,36 @@
 		}
 
 		const ctx = canvas.getContext("2d")!;
-		let imageData: ImageData | null = null;
+		let isFirst = true;
 
-		const analysis = Analysis.init();
-		for (const file of files) {
-			const image = await readImage(file);
-			analysis.analyze(image);
-			
-			if (imageData == null) {
-				canvas.width = image.width / 2;
-				canvas.height = files.length;
-				
-				imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
-			}
-			image.free();
-			analysis.writeImage(imageData.data);
-			ctx.putImageData(imageData, 0, 0);
+		const workers = new Array<AnalysisWorker>();
+		for (let i = 0; i < navigator.hardwareConcurrency; i++) {
+			const worker = new AnalysisWorker();
+			worker.onmessage = (e) => {
+				const { index, buffer, width } = e.data;
+				if (isFirst) {
+					canvas!.width = width / 2;
+					canvas!.height = files.length;
+					isFirst = false;
+				}
+				ctx.putImageData(
+					new ImageData(
+						new Uint8ClampedArray(buffer),
+						width / 2,
+						1,
+					),
+					0,
+					index,
+				);
+			};
+			workers.push(worker);
 		}
-		analysis.free();
+		for (let i = 0; i < files.length; i++) {
+			workers[i % workers.length].postMessage({
+				index: i,
+				file: files[i],
+			});
+		}
 	}
 
 	async function readImage(file: File): Promise<Image> {
@@ -82,7 +95,13 @@
 			<p>Loading...</p>
 		{:then}
 			<label for="file">Load <code>.cbf</code></label>
-			<input id="file" type="file" accept=".cbf" multiple on:change={openFile} />
+			<input
+				id="file"
+				type="file"
+				accept=".cbf"
+				multiple
+				on:change={openFile}
+			/>
 		{:catch error}
 			<p>Something went wrong: {error.message}</p>
 		{/await}
