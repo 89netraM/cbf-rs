@@ -68,8 +68,8 @@ mod tests {
 		const EXAMPLE_DATA: &'static [u8] = include_bytes!("../examples/snap_V4_00013.cbf");
 		let mut reader = Cursor::new(EXAMPLE_DATA);
 		let image = read_image(&mut reader).expect("to read real image");
-		let ImageEnum::I32(image) = image else {
-			panic!("expected i32 pixels")
+		let ImageEnum::I64(image) = image else {
+			panic!("expected i64 pixels")
 		};
 
 		let Some(config) = AnalysisConfig::new(2160, 1000, f64::consts::SQRT_2) else {
