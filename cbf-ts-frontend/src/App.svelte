@@ -1,8 +1,14 @@
 <script lang="ts">
-	import init, { Image, Analysis } from "cbf-rs-wasm";
+	import init, { Image } from "cbf-rs-wasm";
 	import AnalysisWorker from "./worker?worker";
 
 	let canvas: HTMLCanvasElement | null = null;
+	let bufferBuffer: Float64Array | null = null;
+
+	let scale = "linear";
+	let rows = 0;
+	let height = 1;
+	$: scale, height, realRenderAnalysisImage();
 
 	async function openFile(
 		e: Event & { currentTarget: EventTarget & HTMLInputElement },
@@ -47,24 +53,41 @@
 		let isFirst = true;
 
 		const workers = new Array<AnalysisWorker>();
+		let completed = 0;
 		for (let i = 0; i < navigator.hardwareConcurrency; i++) {
 			const worker = new AnalysisWorker();
 			worker.onmessage = (e) => {
-				const { index, buffer, width } = e.data;
+				const { index, width, raw, scaled } = e.data;
 				if (isFirst) {
 					canvas!.width = width / 2;
-					canvas!.height = files.length;
+					canvas!.height = files.length * height;
+					rows = files.length;
+					bufferBuffer = new Float64Array((width / 2) * files.length);
 					isFirst = false;
 				}
-				ctx.putImageData(
-					new ImageData(
-						new Uint8ClampedArray(buffer),
-						width / 2,
-						1,
-					),
-					0,
-					index,
+				bufferBuffer!.set(new Float64Array(raw), (index * width) / 2);
+				const rowImageData = new ImageData(
+					new Uint8ClampedArray(scaled),
+					width / 2,
+					1,
 				);
+				for (
+					let rowDuplicate = 0;
+					rowDuplicate < height;
+					rowDuplicate++
+				) {
+					ctx.putImageData(
+						rowImageData,
+						0,
+						index * height + rowDuplicate,
+					);
+				}
+				if (++completed === files.length) {
+					for (const worker of workers) {
+						worker.terminate();
+					}
+					realRenderAnalysisImage();
+				}
 			};
 			workers.push(worker);
 		}
@@ -79,6 +102,55 @@
 	async function readImage(file: File): Promise<Image> {
 		const buffer = new Uint8Array(await file.arrayBuffer());
 		return Image.load(buffer);
+	}
+
+	function realRenderAnalysisImage(): void {
+		if (canvas == null || bufferBuffer == null) {
+			return;
+		}
+
+		const ctx = canvas.getContext("2d")!;
+		canvas.height = rows * height;
+		const imageBuffer = new Uint8ClampedArray(
+			canvas.width * canvas.height * 4,
+		);
+		let min = Number.MAX_SAFE_INTEGER;
+		let max = Number.MIN_SAFE_INTEGER;
+		for (let i = 0; i < bufferBuffer.length; i++) {
+			min = Math.min(min, bufferBuffer[i]);
+			max = Math.max(max, bufferBuffer[i]);
+		}
+		for (let i = 0; i < bufferBuffer.length; i++) {
+			let value = bufferBuffer[i];
+			if (scale === "linear") {
+				value = (bufferBuffer[i] - min) / (max - min);
+			} else if (scale === "circle") {
+				value = Math.sqrt(
+					1 - Math.pow((bufferBuffer[i] - min) / (max - min) - 1, 2),
+				);
+			} else if (scale === "log") {
+				value =
+					(Math.log(bufferBuffer[i]) - Math.log(min)) /
+					(Math.log(max) - Math.log(min));
+			}
+			value *= 255;
+			const row =
+				Math.floor(i / canvas.width) * canvas.width * (height - 1) * 4;
+			for (let j = 0; j < height; j++) {
+				imageBuffer[row + i * 4 + j * canvas.width * 4] = 255 - value;
+				imageBuffer[row + i * 4 + 1 + j * canvas.width * 4] =
+					255 - value;
+				imageBuffer[row + i * 4 + 2 + j * canvas.width * 4] =
+					255 - value;
+				imageBuffer[row + i * 4 + 3 + j * canvas.width * 4] = 255;
+			}
+		}
+		const imageData = new ImageData(
+			imageBuffer,
+			canvas.width,
+			canvas.height,
+		);
+		ctx.putImageData(imageData, 0, 0);
 	}
 </script>
 
@@ -103,6 +175,26 @@
 				multiple
 				on:change={openFile}
 			/>
+			<br />
+			<label>
+				<span>Scale</span>
+				<select bind:value={scale}>
+					<option value="linear">Linear</option>
+					<option value="circle">Circle</option>
+					<option value="log">Logarithmic</option>
+				</select>
+			</label>
+			<br />
+			<label>
+				<span>Height</span>
+				<input
+					type="number"
+					min="1"
+					max="10"
+					step="1"
+					bind:value={height}
+				/>
+			</label>
 		{:catch error}
 			<p>Something went wrong: {error.message}</p>
 		{/await}

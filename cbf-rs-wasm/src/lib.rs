@@ -63,13 +63,21 @@ impl Analysis {
 		};
 	}
 
-	#[wasm_bindgen(js_name = "writeImage")]
-	pub fn write_image(&self, pixel_buffer: &mut [u8]) {
+	#[wasm_bindgen(getter)]
+	pub fn raw(&self) -> Box<[f64]> {
+		self.0.clone().into()
+	}
+
+	#[wasm_bindgen(getter, js_name = "localScaled")]
+	pub fn local_scaled(&self) -> Box<[u8]> {
 		let (min, max) = min_max(self.0.iter()).unwrap_or_else(|| (&f64::MIN, &f64::MAX));
 		let magnitude = max - min;
 		let scale = 255.0 / magnitude as f64;
-		let pixels = self.0.iter().map(|n| ((*n - min) as f64 * scale) as u8);
-		write_to_pixel_buffer(pixels, pixel_buffer);
+		self.0
+			.iter()
+			.map(|n| ((*n - min) * scale) as u8)
+			.flat_map(|v| [255 - v, 255 - v, 255 - v, 255])
+			.collect()
 	}
 }
 
