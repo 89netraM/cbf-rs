@@ -5,10 +5,11 @@
 	let canvas: HTMLCanvasElement | null = null;
 	let bufferBuffer: Float64Array | null = null;
 
-	let scale = "linear";
 	let rows = 0;
-	let height = 1;
-	$: scale, height, realRenderAnalysisImage();
+
+	let colorScale = "linear";
+	let heightScale = 1;
+	$: colorScale, heightScale, realRenderAnalysisImage();
 
 	async function openFile(
 		e: Event & { currentTarget: EventTarget & HTMLInputElement },
@@ -60,7 +61,7 @@
 				const { index, width, raw, scaled } = e.data;
 				if (isFirst) {
 					canvas!.width = width / 2;
-					canvas!.height = files.length * height;
+					canvas!.height = files.length * heightScale;
 					rows = files.length;
 					bufferBuffer = new Float64Array((width / 2) * files.length);
 					isFirst = false;
@@ -73,13 +74,13 @@
 				);
 				for (
 					let rowDuplicate = 0;
-					rowDuplicate < height;
+					rowDuplicate < heightScale;
 					rowDuplicate++
 				) {
 					ctx.putImageData(
 						rowImageData,
 						0,
-						index * height + rowDuplicate,
+						index * heightScale + rowDuplicate,
 					);
 				}
 				if (++completed === files.length) {
@@ -110,7 +111,7 @@
 		}
 
 		const ctx = canvas.getContext("2d")!;
-		canvas.height = rows * height;
+		canvas.height = rows * heightScale;
 		const imageBuffer = new Uint8ClampedArray(
 			canvas.width * canvas.height * 4,
 		);
@@ -122,21 +123,24 @@
 		}
 		for (let i = 0; i < bufferBuffer.length; i++) {
 			let value = bufferBuffer[i];
-			if (scale === "linear") {
+			if (colorScale === "linear") {
 				value = (bufferBuffer[i] - min) / (max - min);
-			} else if (scale === "circle") {
+			} else if (colorScale === "circle") {
 				value = Math.sqrt(
 					1 - Math.pow((bufferBuffer[i] - min) / (max - min) - 1, 2),
 				);
-			} else if (scale === "log") {
+			} else if (colorScale === "log") {
 				value =
 					(Math.log(bufferBuffer[i]) - Math.log(min)) /
 					(Math.log(max) - Math.log(min));
 			}
 			value *= 255;
 			const row =
-				Math.floor(i / canvas.width) * canvas.width * (height - 1) * 4;
-			for (let j = 0; j < height; j++) {
+				Math.floor(i / canvas.width) *
+				canvas.width *
+				(heightScale - 1) *
+				4;
+			for (let j = 0; j < heightScale; j++) {
 				imageBuffer[row + i * 4 + j * canvas.width * 4] = 255 - value;
 				imageBuffer[row + i * 4 + 1 + j * canvas.width * 4] =
 					255 - value;
@@ -177,8 +181,8 @@
 			/>
 			<br />
 			<label>
-				<span>Scale</span>
-				<select bind:value={scale}>
+				<span>Color scale</span>
+				<select bind:value={colorScale}>
 					<option value="linear">Linear</option>
 					<option value="circle">Circle</option>
 					<option value="log">Logarithmic</option>
@@ -186,13 +190,12 @@
 			</label>
 			<br />
 			<label>
-				<span>Height</span>
+				<span>Height scale</span>
 				<input
 					type="number"
 					min="1"
-					max="10"
 					step="1"
-					bind:value={height}
+					bind:value={heightScale}
 				/>
 			</label>
 		{:catch error}
